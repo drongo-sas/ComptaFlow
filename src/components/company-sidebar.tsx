@@ -3,94 +3,114 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Landmark,
-  FileInput,
-  ReceiptText,
-  FileOutput,
-  Settings,
-  LogOut,
+  LayoutDashboard, Landmark, FileInput, ReceiptText,
+  FileOutput, Settings, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { company } from "@/lib/mock-data";
+import { useSidebar } from "@/lib/sidebar-context";
 
 const nav = [
-  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/bank-transactions", label: "Transactions bancaires", icon: Landmark },
-  { href: "/supplier-invoices", label: "Factures fournisseurs", icon: FileInput },
-  { href: "/expenses", label: "Dépenses", icon: ReceiptText },
-  { href: "/customer-invoices", label: "Factures clients", icon: FileOutput },
+  { href: "/dashboard",          label: "Tableau de bord",       icon: LayoutDashboard },
+  { href: "/bank-transactions",  label: "Transactions bancaires", icon: Landmark       },
+  { href: "/supplier-invoices",  label: "Factures fournisseurs",  icon: FileInput      },
+  { href: "/expenses",           label: "Dépenses",               icon: ReceiptText    },
+  { href: "/customer-invoices",  label: "Factures clients",       icon: FileOutput     },
 ];
 
 export function CompanySidebar() {
-  const pathname = usePathname();
+  const pathname  = usePathname();
+  const { collapsed } = useSidebar();
 
   return (
-    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
+    <aside
+      className={cn(
+        "sticky top-0 flex h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all duration-200",
+        collapsed ? "w-[72px]" : "w-64",
+      )}
+    >
       {/* Brand */}
-      <div className="flex h-16 items-center gap-2.5 px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+      <div className={cn("flex h-16 items-center", collapsed ? "justify-center px-0" : "gap-2.5 px-5")}>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <span className="font-mono text-sm font-semibold">C</span>
         </div>
-        <span className="text-base font-semibold tracking-tight text-white">Comptia</span>
+        {!collapsed && (
+          <span className="text-base font-semibold tracking-tight text-white">Comptia</span>
+        )}
       </div>
 
       {/* Company switcher */}
-      <div className="mx-3 mb-2 flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5">
-        <div className="flex size-8 items-center justify-center rounded-md bg-primary/20 text-xs font-semibold text-white">
+      <div
+        className={cn(
+          "mx-3 mb-2 flex items-center rounded-lg bg-white/5",
+          collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
+        )}
+        title={collapsed ? company.name : undefined}
+      >
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/20 text-xs font-semibold text-white">
           {company.initials}
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-white">{company.name}</p>
-          <p className="truncate font-mono text-[11px] text-sidebar-foreground/60">
-            ICE {company.ice}
-          </p>
-        </div>
+        {!collapsed && (
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-white">{company.name}</p>
+            <p className="truncate font-mono text-[11px] text-sidebar-foreground/60">
+              ICE {company.ice}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Nav */}
       <nav className="flex-1 space-y-1 px-3 py-3">
         {nav.map((item) => {
           const active = pathname === item.href;
-          const Icon = item.icon;
+          const Icon   = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
+              title={collapsed ? item.label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                "flex items-center rounded-lg py-2.5 text-sm transition-colors",
+                collapsed ? "justify-center px-0" : "gap-3 px-3",
                 active
                   ? "bg-sidebar-accent font-medium text-white"
-                  : "text-sidebar-foreground/80 hover:bg-white/5 hover:text-white"
+                  : "text-sidebar-foreground/80 hover:bg-white/5 hover:text-white",
               )}
             >
               <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-              {item.label}
+              {!collapsed && item.label}
             </Link>
           );
         })}
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-sidebar-border p-3 space-y-0.5">
+      <div className="space-y-0.5 border-t border-sidebar-border p-3">
         <Link
           href="/settings/company"
+          title={collapsed ? "Paramètres" : undefined}
           className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+            "flex items-center rounded-lg py-2.5 text-sm transition-colors",
+            collapsed ? "justify-center px-0" : "gap-3 px-3",
             pathname.startsWith("/settings")
               ? "bg-sidebar-accent font-medium text-white"
-              : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-white"
+              : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-white",
           )}
         >
-          <Settings className="h-[18px] w-[18px]" strokeWidth={pathname.startsWith("/settings") ? 2.2 : 1.8} />
-          Paramètres
+          <Settings className="h-[18px] w-[18px] shrink-0" strokeWidth={pathname.startsWith("/settings") ? 2.2 : 1.8} />
+          {!collapsed && "Paramètres"}
         </Link>
         <Link
           href="/login"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/70 transition-colors hover:bg-white/5 hover:text-white"
+          title={collapsed ? "Déconnexion" : undefined}
+          className={cn(
+            "flex items-center rounded-lg py-2.5 text-sm text-sidebar-foreground/70 transition-colors hover:bg-white/5 hover:text-white",
+            collapsed ? "justify-center px-0" : "gap-3 px-3",
+          )}
         >
-          <LogOut className="h-[18px] w-[18px]" strokeWidth={1.8} />
-          Déconnexion
+          <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
+          {!collapsed && "Déconnexion"}
         </Link>
       </div>
     </aside>

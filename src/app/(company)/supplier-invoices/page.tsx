@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Plus, Search, Mail, Copy, Check, Sparkles, Upload, ScanLine,
   FileText, CheckCircle2, CreditCard, AlertCircle, X,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { supplierInvoices as seed, type SupplierInvoice } from "@/lib/mock-data";
 import { formatMAD, formatDate, cn } from "@/lib/utils";
+import { useSidebar } from "@/lib/sidebar-context";
 import { UploadInvoiceModal } from "./upload-modal";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -69,12 +70,18 @@ function effectiveStatus(inv: SupplierInvoice): SupplierInvoice["status"] {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SupplierInvoicesPage() {
+  const { setCollapsed } = useSidebar();
   const [invoices, setInvoices]     = useState<SupplierInvoice[]>(seed);
   const [selected, setSelected]     = useState<SupplierInvoice | null>(null);
   const [filter, setFilter]         = useState<FilterKey>("all");
   const [search, setSearch]         = useState("");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [copied, setCopied]         = useState(false);
+
+  useEffect(() => {
+    setCollapsed(selected !== null);
+    return () => setCollapsed(false);
+  }, [selected, setCollapsed]);
 
   const counts = useMemo(() => {
     const c = { all: invoices.length, draft: 0, validated: 0, paid: 0, overdue: 0 };
@@ -171,7 +178,7 @@ export default function SupplierInvoicesPage() {
         <div className="flex flex-1 overflow-hidden">
 
           {/* Left: narrow list (320 px) */}
-          <div className="flex w-[320px] shrink-0 flex-col border-r bg-background">
+          <div className="flex w-[360px] shrink-0 flex-col border-r bg-background">
 
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3">
@@ -658,7 +665,7 @@ function InvoiceDetail({
 
       {/* ── BOTTOM: document viewer ── */}
       <div className="flex flex-1 flex-col overflow-hidden bg-muted/10">
-        <div className="flex shrink-0 items-center justify-between border-b bg-background px-5 py-2">
+        <div className="flex shrink-0 items-center justify-between bg-background px-5 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             {fields.fileUrl ? "Document original" : "Aperçu"}
           </p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, CircleHelp, Loader2, Link2, Link2Off, Sparkles, Upload, X } from "lucide-react";
+import { CheckCircle2, CircleHelp, Loader2, Link2, Link2Off, Sparkles, Upload, X, FileText } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,8 @@ import {
   type VatRate,
 } from "@/lib/mock-data";
 import { getSessionId } from "@/lib/session-id";
-import { formatMAD, formatDate, cn } from "@/lib/utils";
+import { formatMAD, formatAmount, formatDate, cn } from "@/lib/utils";
+import { useSidebar } from "@/lib/sidebar-context";
 import { TransactionDrawer } from "./transaction-drawer";
 import { ImportModal } from "./import-modal";
 import { RelevesTab } from "./releves-tab";
@@ -37,6 +38,7 @@ type Tab = "transactions" | "releves";
 type Filter = "all" | "categorized" | "uncategorized";
 
 export default function BankTransactionsPage() {
+  const { setCollapsed } = useSidebar();
   const [tab, setTab] = useState<Tab>("transactions");
   const [rows, setRows] = useState<BankTransaction[]>(seed);
   const [filter, setFilter] = useState<Filter>("all");
@@ -54,6 +56,13 @@ export default function BankTransactionsPage() {
   const [pendingAiIds, setPendingAiIds] = useState<Set<string>>(new Set());
   const [aiDoneCount, setAiDoneCount] = useState(0);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Collapse sidebar when in split view, restore on exit
+  useEffect(() => {
+    const inSplit = selectedTx !== null && tab === "transactions";
+    setCollapsed(inSplit);
+    return () => setCollapsed(false);
+  }, [selectedTx, tab, setCollapsed]);
 
   // Animate progress bar while AI is running
   useEffect(() => {
@@ -209,259 +218,272 @@ export default function BankTransactionsPage() {
       : undefined;
   }, [importTarget, coverage]);
 
+  // ── The full-width transactions content (table + toolbar) ───────────────────
+  const transactionsContent = (
+    <div className="flex-1 overflow-y-auto bg-paper">
+      <div className="space-y-4 p-6">
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTab active={filter === "all"} onClick={() => setFilter("all")} label="Toutes" count={counts.all} />
+            <FilterTab active={filter === "uncategorized"} onClick={() => setFilter("uncategorized")} label="À catégoriser" count={counts.uncategorized} tone="warning" />
+            <FilterTab active={filter === "categorized"} onClick={() => setFilter("categorized")} label="Catégorisées" count={counts.categorized} tone="success" />
+          </div>
+          <div className="flex items-center gap-2">
+            {counts.uncategorized > 0 && !aiPending && (
+              <Button size="sm" variant="outline" onClick={handleBatchCategorize}>
+                <Sparkles className="size-4" />
+                Catégoriser {counts.uncategorized} transactions
+              </Button>
+            )}
+            <Button size="sm" onClick={() => { setImportTarget(null); setImportOpen(true); }}>
+              <Upload className="size-4" />
+              Importer un relevé
+            </Button>
+          </div>
+        </div>
+
+        {/* AI in-progress banner */}
+        {aiPending && (
+          <div className="flex items-center gap-3 rounded-lg border border-primary/25 bg-primary/8 px-4 py-3">
+            <div className="relative flex size-8 shrink-0 items-center justify-center">
+              <Loader2 className="absolute size-8 animate-spin text-primary/30" />
+              <Sparkles className="size-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-primary">Analyse IA en cours…</p>
+              <p className="text-xs text-primary/70">
+                Catégorisation de <strong>{pendingAiIds.size}</strong> transaction{pendingAiIds.size > 1 ? "s" : ""} · Identification des taux de TVA
+              </p>
+            </div>
+            <div className="ml-auto flex shrink-0 flex-col items-end gap-1">
+              <span className="tnum font-mono text-xs font-semibold text-primary">{Math.round(aiProgress)}%</span>
+              <div className="h-1.5 w-36 overflow-hidden rounded-full bg-primary/15">
+                <div className="h-full rounded-full bg-primary transition-all duration-300 ease-out" style={{ width: `${aiProgress}%` }} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI done flash */}
+        {aiDoneCount > 0 && !aiPending && (
+          <div className="flex items-center gap-3 rounded-lg border border-success/25 bg-success/8 px-4 py-2.5">
+            <CheckCircle2 className="size-4 shrink-0 text-success" />
+            <span className="text-sm font-medium text-success">
+              IA · {aiDoneCount} transaction{aiDoneCount > 1 ? "s" : ""} catégorisée{aiDoneCount > 1 ? "s" : ""} automatiquement
+            </span>
+            <button type="button" onClick={() => setAiDoneCount(0)} className="ml-auto text-success/60 hover:text-success">
+              <X className="size-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Full table */}
+        <Card className="relative overflow-hidden">
+          {aiPending && (
+            <div className="absolute inset-x-0 top-0 z-10 h-0.5 bg-muted">
+              <div className="h-full bg-primary transition-all duration-300 ease-out" style={{ width: `${aiProgress}%` }} />
+            </div>
+          )}
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Date</TableHead>
+                <TableHead>Libellé</TableHead>
+                <TableHead>Pièce</TableHead>
+                <TableHead>Catégorie</TableHead>
+                <TableHead>TVA</TableHead>
+                <TableHead className="text-right">Montant</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visible.map((t) => (
+                <TableRow
+                  key={t.id}
+                  className={cn("cursor-pointer", pendingAiIds.has(t.id) && "bg-primary/[0.03]")}
+                  onClick={() => setSelectedTx(t)}
+                >
+                  <TableCell className="tnum whitespace-nowrap font-mono text-xs text-muted-foreground">
+                    {formatDate(t.date)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium">{t.label}</p>
+                        <p className="font-mono text-xs text-muted-foreground">{t.reference}</p>
+                      </div>
+                      {t.verified && <CheckCircle2 className="size-3.5 shrink-0 text-success" />}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {t.matched ? (
+                      <Badge variant="default"><Link2 className="size-3" />Liée</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground"><Link2Off className="size-3" />Aucune</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {pendingAiIds.has(t.id) ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                        <Loader2 className="size-3.5 animate-spin" />Analyse IA…
+                      </span>
+                    ) : t.category ? (
+                      <Badge variant="success"><CheckCircle2 className="size-3" />{CATEGORY_LABELS[t.category]}</Badge>
+                    ) : (
+                      <Badge variant="warning"><CircleHelp className="size-3" />À catégoriser</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {t.vat ? (
+                      <span className="tnum font-mono text-xs text-muted-foreground">{getVatLabel(t.vat)}</span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full border border-dashed border-warning/60 bg-warning/8 px-2 py-0.5 text-xs font-medium text-warning-foreground">
+                        Définir TVA
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className={cn("tnum whitespace-nowrap text-right font-mono font-medium", t.amount > 0 ? "text-success" : "text-foreground")}>
+                    {t.amount > 0 ? "+" : ""}{formatMAD(t.amount)}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {visible.length === 0 && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                    Aucune transaction dans cette vue.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Card>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Topbar title="Transactions bancaires" subtitle={`Exercice ${company.activeYear} · 2 comptes`} />
 
-      {/* ── Tab bar ─────────────────────────────────────────────────────────── */}
-      <div className="flex gap-0 border-b bg-card px-6">
-        <PageTab active={tab === "transactions"} onClick={() => setTab("transactions")}>
-          Transactions
-          <TabPill>{counts.all}</TabPill>
-        </PageTab>
-        <PageTab active={tab === "releves"} onClick={() => setTab("releves")}>
-          Relevés bancaires
-          {totalMissing > 0 ? (
-            <TabPill tone="warning">{totalMissing}</TabPill>
-          ) : (
-            <TabPill tone="success">✓</TabPill>
-          )}
-        </PageTab>
-      </div>
+      {selectedTx && tab === "transactions" ? (
+        /* ── SPLIT VIEW: transaction selected ─────────────────────────────── */
+        <div className="flex flex-1 overflow-hidden">
 
-      {/* ── Tab content ─────────────────────────────────────────────────────── */}
-      <div className="bg-paper flex-1 space-y-4 p-6">
-        {tab === "transactions" && (
-          <>
-            {/* Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <FilterTab
-                  active={filter === "all"}
-                  onClick={() => setFilter("all")}
-                  label="Toutes"
-                  count={counts.all}
-                />
-                <FilterTab
-                  active={filter === "uncategorized"}
-                  onClick={() => setFilter("uncategorized")}
-                  label="À catégoriser"
-                  count={counts.uncategorized}
-                  tone="warning"
-                />
-                <FilterTab
-                  active={filter === "categorized"}
-                  onClick={() => setFilter("categorized")}
-                  label="Catégorisées"
-                  count={counts.categorized}
-                  tone="success"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                {counts.uncategorized > 0 && !aiPending && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleBatchCategorize}
-                  >
-                    <Sparkles className="size-4" />
-                    Catégoriser {counts.uncategorized} transactions
-                  </Button>
-                )}
-                <Button size="sm" onClick={() => { setImportTarget(null); setImportOpen(true); }}>
-                  <Upload className="size-4" />
-                  Importer un relevé
-                </Button>
+          {/* Left: narrow list (320px) */}
+          <div className="flex w-[360px] shrink-0 flex-col border-r bg-background">
+            {/* Filter bar */}
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="flex gap-1 overflow-x-auto">
+                {(["all", "uncategorized", "categorized"] as Filter[]).map((f) => {
+                  const labels = { all: "Toutes", uncategorized: "À catégoriser", categorized: "Catégorisées" };
+                  const cnt = counts[f];
+                  const active = filter === f;
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f)}
+                      className={cn(
+                        "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                        active ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"
+                      )}
+                    >
+                      {labels[f]}
+                      <span className={cn(
+                        "min-w-[16px] rounded-full px-1 text-center text-[10px] font-semibold tabular-nums",
+                        active ? "bg-background/20 text-background" : "bg-muted-foreground/15 text-muted-foreground"
+                      )}>{cnt}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* AI in-progress banner */}
-            {aiPending && (
-              <div className="flex items-center gap-3 rounded-lg border border-primary/25 bg-primary/8 px-4 py-3">
-                {/* Stacked spinner + sparkles icon */}
-                <div className="relative flex size-8 shrink-0 items-center justify-center">
-                  <Loader2 className="absolute size-8 animate-spin text-primary/30" />
-                  <Sparkles className="size-4 text-primary" />
+            {/* Compact rows */}
+            <div className="flex-1 overflow-y-auto">
+              {visible.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-16">
+                  <FileText className="size-7 text-muted-foreground/30" />
+                  <p className="text-xs text-muted-foreground">Aucune transaction</p>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-primary">Analyse IA en cours…</p>
-                  <p className="text-xs text-primary/70">
-                    Catégorisation de <strong>{pendingAiIds.size}</strong> transaction{pendingAiIds.size > 1 ? "s" : ""} · Identification des taux de TVA
-                  </p>
-                </div>
-                <div className="ml-auto flex shrink-0 flex-col items-end gap-1">
-                  <span className="tnum font-mono text-xs font-semibold text-primary">
-                    {Math.round(aiProgress)}%
-                  </span>
-                  <div className="h-1.5 w-36 overflow-hidden rounded-full bg-primary/15">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-300 ease-out"
-                      style={{ width: `${aiProgress}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* AI done flash */}
-            {aiDoneCount > 0 && !aiPending && (
-              <div className="flex items-center gap-3 rounded-lg border border-success/25 bg-success/8 px-4 py-2.5">
-                <CheckCircle2 className="size-4 shrink-0 text-success" />
-                <span className="text-sm font-medium text-success">
-                  IA · {aiDoneCount} transaction{aiDoneCount > 1 ? "s" : ""} catégorisée{aiDoneCount > 1 ? "s" : ""} automatiquement
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setAiDoneCount(0)}
-                  className="ml-auto text-success/60 hover:text-success"
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            )}
-
-            {/* Transaction table */}
-            <Card className="relative overflow-hidden">
-              {/* Thin top progress bar on the card itself */}
-              {aiPending && (
-                <div className="absolute inset-x-0 top-0 z-10 h-0.5 bg-muted">
-                  <div
-                    className="h-full bg-primary transition-all duration-300 ease-out"
-                    style={{ width: `${aiProgress}%` }}
-                  />
-                </div>
-              )}
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead>Date</TableHead>
-                    <TableHead>Libellé</TableHead>
-                    <TableHead className="hidden lg:table-cell">Compte</TableHead>
-                    <TableHead>Pièce</TableHead>
-                    <TableHead>Catégorie</TableHead>
-                    <TableHead>TVA</TableHead>
-                    <TableHead className="text-right">Montant</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visible.map((t) => (
-                    <TableRow
+              ) : (
+                visible.map((t) => {
+                  const sel = selectedTx?.id === t.id;
+                  return (
+                    <button
                       key={t.id}
-                      className={cn(
-                        "cursor-pointer",
-                        pendingAiIds.has(t.id) && "bg-primary/[0.03]"
-                      )}
                       onClick={() => setSelectedTx(t)}
+                      className={cn(
+                        "flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors",
+                        sel
+                          ? "border-l-2 border-l-primary bg-primary/10"
+                          : "border-l-2 border-l-transparent hover:bg-muted/50"
+                      )}
                     >
-                      <TableCell className="tnum whitespace-nowrap font-mono text-xs text-muted-foreground">
-                        {formatDate(t.date)}
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="min-w-0">
-                            <p className="font-medium">{t.label}</p>
-                            <p className="font-mono text-xs text-muted-foreground">{t.reference}</p>
-                          </div>
-                          {t.verified && (
-                            <CheckCircle2 className="size-3.5 shrink-0 text-success" />
-                          )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-1">
+                          <p className="truncate text-sm font-semibold leading-tight">{t.label}</p>
+                          <p className={cn("tnum shrink-0 font-mono text-sm font-semibold", t.amount > 0 ? "text-success" : "")}>
+                            {t.amount > 0 ? "+" : "−"}{formatAmount(t.amount)}
+                          </p>
                         </div>
-                      </TableCell>
+                        <div className="mt-0.5 flex items-center justify-between gap-2">
+                          <p className="font-mono text-[11px] text-muted-foreground">
+                            {t.reference} · {formatDate(t.date)}
+                          </p>
+                          <span className={cn(
+                            "size-1.5 shrink-0 rounded-full",
+                            t.category ? "bg-emerald-400" : "bg-amber-400"
+                          )} />
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
 
-                      <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground lg:table-cell">
-                        {t.account}
-                      </TableCell>
-
-                      <TableCell>
-                        {t.matched ? (
-                          <Badge variant="default">
-                            <Link2 className="size-3" />
-                            Liée
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-muted-foreground">
-                            <Link2Off className="size-3" />
-                            Aucune
-                          </Badge>
-                        )}
-                      </TableCell>
-
-                      <TableCell>
-                        {pendingAiIds.has(t.id) ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                            <Loader2 className="size-3.5 animate-spin" />
-                            Analyse IA…
-                          </span>
-                        ) : t.category ? (
-                          <Badge variant="success">
-                            <CheckCircle2 className="size-3" />
-                            {CATEGORY_LABELS[t.category]}
-                          </Badge>
-                        ) : (
-                          <Badge variant="warning">
-                            <CircleHelp className="size-3" />À catégoriser
-                          </Badge>
-                        )}
-                      </TableCell>
-
-                      <TableCell>
-                        {t.vat ? (
-                          <span className="tnum font-mono text-xs text-muted-foreground">
-                            {getVatLabel(t.vat)}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full border border-dashed border-warning/60 bg-warning/8 px-2 py-0.5 text-xs font-medium text-warning-foreground">
-                            Définir TVA
-                          </span>
-                        )}
-                      </TableCell>
-
-                      <TableCell
-                        className={cn(
-                          "tnum whitespace-nowrap text-right font-mono font-medium",
-                          t.amount > 0 ? "text-success" : "text-foreground"
-                        )}
-                      >
-                        {t.amount > 0 ? "+" : ""}
-                        {formatMAD(t.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-
-                  {visible.length === 0 && (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell
-                        colSpan={7}
-                        className="py-10 text-center text-sm text-muted-foreground"
-                      >
-                        Aucune transaction dans cette vue.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </Card>
-          </>
-        )}
-
-        {tab === "releves" && (
-          <RelevesTab
-            coverage={visibleCoverage}
-            year={relevesYear}
-            availableYears={availableYears}
-            onYearChange={handleYearChange}
-            onImportRequest={handleImportRequest}
+          {/* Right: inline detail panel */}
+          <TransactionDrawer
+            tx={selectedTx}
+            onClose={() => setSelectedTx(null)}
+            onSave={handleSave}
+            mode="inline"
           />
-        )}
-      </div>
+        </div>
+      ) : (
+        /* ── FULL VIEW: nothing selected ──────────────────────────────────── */
+        <>
+          {/* Tab bar */}
+          <div className="flex gap-0 border-b bg-card px-6">
+            <PageTab active={tab === "transactions"} onClick={() => setTab("transactions")}>
+              Transactions
+              <TabPill>{counts.all}</TabPill>
+            </PageTab>
+            <PageTab active={tab === "releves"} onClick={() => { setSelectedTx(null); setTab("releves"); }}>
+              Relevés bancaires
+              {totalMissing > 0 ? (
+                <TabPill tone="warning">{totalMissing}</TabPill>
+              ) : (
+                <TabPill tone="success">✓</TabPill>
+              )}
+            </PageTab>
+          </div>
 
-      {/* ── Overlays ────────────────────────────────────────────────────────── */}
-      <TransactionDrawer
-        tx={selectedTx}
-        onClose={() => setSelectedTx(null)}
-        onSave={handleSave}
-      />
+          {tab === "transactions" && transactionsContent}
+          {tab === "releves" && (
+            <div className="flex-1 overflow-y-auto bg-paper p-6">
+              <RelevesTab
+                coverage={visibleCoverage}
+                year={relevesYear}
+                availableYears={availableYears}
+                onYearChange={handleYearChange}
+                onImportRequest={handleImportRequest}
+              />
+            </div>
+          )}
+        </>
+      )}
 
       {importOpen && (
         <ImportModal
