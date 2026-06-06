@@ -437,9 +437,21 @@ export const expenses: Expense[] = [
   },
 ];
 
+export interface InvoiceLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number; // HT per unit
+  vatRate: "20" | "14" | "10" | "7" | "0" | "exempt";
+}
+
 export interface CustomerInvoice {
   id: string;
   customer: string;
+  customerAddress?: string;
+  customerCity?: string;
+  customerICE?: string;
+  customerIF?: string;
   number: string;
   date: string;
   dueDate: string;
@@ -447,6 +459,8 @@ export interface CustomerInvoice {
   vat: number;
   total: number;
   status: "draft" | "sent" | "partial" | "paid" | "overdue";
+  items: InvoiceLineItem[];
+  notes?: string;
 }
 
 export const customerInvoices: CustomerInvoice[] = [
@@ -460,6 +474,11 @@ export const customerInvoices: CustomerInvoice[] = [
     vat: 3075,
     total: 18450,
     status: "paid",
+    items: [
+      { id: "c1-1", description: "Développement application web", quantity: 1, unitPrice: 10000, vatRate: "20" },
+      { id: "c1-2", description: "Maintenance mensuelle", quantity: 3, unitPrice: 1125, vatRate: "20" },
+      { id: "c1-3", description: "Formation utilisateurs", quantity: 1, unitPrice: 2000, vatRate: "20" },
+    ],
   },
   {
     id: "c2",
@@ -471,6 +490,10 @@ export const customerInvoices: CustomerInvoice[] = [
     vat: 2050,
     total: 12300,
     status: "paid",
+    items: [
+      { id: "c2-1", description: "Intégration API bancaire", quantity: 1, unitPrice: 7500, vatRate: "20" },
+      { id: "c2-2", description: "Support technique", quantity: 5, unitPrice: 550, vatRate: "20" },
+    ],
   },
   {
     id: "c3",
@@ -482,6 +505,11 @@ export const customerInvoices: CustomerInvoice[] = [
     vat: 4400,
     total: 26400,
     status: "sent",
+    items: [
+      { id: "c3-1", description: "Audit système informatique", quantity: 1, unitPrice: 15000, vatRate: "20" },
+      { id: "c3-2", description: "Rapport de conformité RGPD", quantity: 1, unitPrice: 5000, vatRate: "20" },
+      { id: "c3-3", description: "Accompagnement mise en conformité", quantity: 4, unitPrice: 500, vatRate: "20" },
+    ],
   },
   {
     id: "c4",
@@ -493,6 +521,10 @@ export const customerInvoices: CustomerInvoice[] = [
     vat: 680,
     total: 4080,
     status: "overdue",
+    items: [
+      { id: "c4-1", description: "Création site vitrine et réservation", quantity: 1, unitPrice: 3000, vatRate: "20" },
+      { id: "c4-2", description: "Configuration messagerie professionnelle", quantity: 1, unitPrice: 400, vatRate: "20" },
+    ],
   },
   {
     id: "c5",
@@ -504,6 +536,10 @@ export const customerInvoices: CustomerInvoice[] = [
     vat: 1120,
     total: 6720,
     status: "draft",
+    items: [
+      { id: "c5-1", description: "Développement catalogue produits en ligne", quantity: 1, unitPrice: 4500, vatRate: "20" },
+      { id: "c5-2", description: "Hébergement et nom de domaine (1 an)", quantity: 1, unitPrice: 1100, vatRate: "20" },
+    ],
   },
 ];
 
@@ -518,6 +554,8 @@ export const company = {
   identifiantFiscal: "45321200",
   rc: "144521 — Casa",
   cnss: "3042156",
+  tp: "32456789",
+  rib: "007 780 0002145789000047 34",
   // Activity
   activity: "Services informatiques et conseil",
   activityCode: "6201Z",
