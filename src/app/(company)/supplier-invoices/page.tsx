@@ -339,11 +339,17 @@ function InvoiceDetail({
     st === "validated" ? "Marquer payée"  :
     st === "overdue"   ? "Marquer payée"  : null;
 
+  const iframeSrc = fields.fileUrl
+    ? fields.fileUrl.startsWith("blob:")
+      ? fields.fileUrl
+      : `/api/pdf-proxy?url=${encodeURIComponent(fields.fileUrl)}`
+    : null;
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
 
-      {/* Detail header */}
-      <div className="flex shrink-0 items-center justify-between border-b bg-background px-5 py-3.5">
+      {/* ── Header ── */}
+      <div className="flex shrink-0 items-center justify-between border-b bg-background px-5 py-3">
         <div className="flex items-center gap-3">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold">
             {fields.supplier.charAt(0)}
@@ -354,266 +360,153 @@ function InvoiceDetail({
           </div>
           <Badge variant={sc.variant}>{sc.label}</Badge>
         </div>
-
         <div className="flex items-center gap-2">
           {advanceLabel && (
-            <Button size="sm" onClick={advance} className="gap-1.5">
-              {st === "draft"
-                ? <CheckCircle2 className="size-3.5" />
-                : <CreditCard className="size-3.5" />
-              }
+            <Button size="sm" onClick={advance}>
+              {st === "draft" ? <CheckCircle2 className="size-3.5" /> : <CreditCard className="size-3.5" />}
               {advanceLabel}
             </Button>
           )}
           <Button
             size="sm"
-            variant={saved ? "outline" : "outline"}
+            variant="outline"
             onClick={handleSave}
             className={cn(saved && "border-success text-success")}
           >
-            {saved ? <><Check className="size-3.5" /> Sauvegardé</> : "Sauvegarder"}
+            {saved ? <><Check className="size-3.5" />Sauvegardé</> : "Sauvegarder"}
           </Button>
         </div>
       </div>
 
-      {/* Body — side by side */}
-      <div className="flex flex-1 overflow-hidden">
-
-        {/* Document panel */}
-        <div className={cn(
-          "flex w-[42%] shrink-0 flex-col border-r",
-          fields.fileUrl ? "overflow-hidden" : "overflow-y-auto gap-3 bg-muted/10 p-5",
-        )}>
-
-          {/* ── Real file embed ── */}
-          {fields.fileUrl && (
-            <>
-              <div className="flex shrink-0 items-center justify-between border-b bg-background px-4 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Document original
-                </p>
-                <a
-                  href={fields.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] font-medium text-primary hover:underline"
-                >
-                  Ouvrir ↗
-                </a>
-              </div>
-              <div className="flex-1 overflow-hidden bg-muted/20">
-                {fields.fileType === "image" ? (
-                  <div className="h-full overflow-y-auto p-4">
-                    <img
-                      src={fields.fileUrl}
-                      alt="Facture"
-                      className="w-full rounded-lg object-contain shadow-sm"
-                    />
-                  </div>
-                ) : (
-                  <iframe
-                    // blob: URLs embed directly; https: URLs go through proxy to force inline
-                    src={
-                      fields.fileUrl.startsWith("blob:")
-                        ? fields.fileUrl
-                        : `/api/pdf-proxy?url=${encodeURIComponent(fields.fileUrl)}`
-                    }
-                    title="Aperçu facture"
-                    className="h-full w-full border-0"
-                  />
-                )}
-              </div>
-            </>
-          )}
-
-          {/* ── Styled card fallback (no file) ── */}
-          {!fields.fileUrl && (
-            <>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Document
-          </p>
-
-          <div className="rounded-xl border bg-white shadow-sm overflow-hidden text-[12px]">
-            {/* Invoice header */}
-            <div className="border-b px-5 pt-5 pb-4">
-              <p className="text-2xl font-black tracking-tight text-foreground">Facture</p>
-              <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
-                <div className="flex gap-3">
-                  <span className="w-24 shrink-0 font-medium text-foreground">N° Facture</span>
-                  <span className="font-mono">{fields.number}</span>
-                </div>
-                <div className="flex gap-3">
-                  <span className="w-24 shrink-0 font-medium text-foreground">Date</span>
-                  <span>{formatDate(fields.date)}</span>
-                </div>
-                <div className="flex gap-3">
-                  <span className={cn("w-24 shrink-0 font-medium", st === "overdue" ? "text-destructive" : "text-foreground")}>Échéance</span>
-                  <span className={st === "overdue" ? "font-semibold text-destructive" : ""}>{formatDate(fields.dueDate)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* From / To */}
-            <div className="grid grid-cols-2 gap-3 border-b px-5 py-4 text-[11px]">
-              <div>
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">De</p>
-                <p className="font-bold text-foreground">Argan Digital SARL</p>
-                <p className="text-muted-foreground">123 Bd Zerktouni</p>
-                <p className="text-muted-foreground">Casablanca 20100</p>
-              </div>
-              <div>
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">À</p>
-                <p className="font-bold text-foreground">{fields.supplier}</p>
-                <div className="flex items-center gap-1 mt-0.5 text-muted-foreground">
-                  <SrcIcon className="size-3 shrink-0" />
-                  <span>{srcLabel}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Line items */}
-            <div className="border-b px-5 py-3">
-              <div className="mb-1.5 grid grid-cols-[1fr_auto] gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                <span>Description</span>
-                <span className="text-right">Total HT</span>
-              </div>
-              <div className="grid grid-cols-[1fr_auto] gap-2 py-2 text-[11px]">
-                <div>
-                  <p className="font-medium text-foreground">Prestation de service</p>
-                  <p className="text-muted-foreground">
-                    {fields.vatRate === "exempt" ? "Exonéré de TVA" : `TVA ${fields.vatRate ?? "20"}%`}
-                  </p>
-                </div>
-                <span className="tnum font-mono font-semibold self-start">{formatMAD(fields.amountHT)}</span>
-              </div>
-            </div>
-
-            {/* Totals */}
-            <div className="space-y-1.5 px-5 py-3 text-[11px]">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Total HT</span>
-                <span className="tnum font-mono">{formatMAD(fields.amountHT)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>TVA ({fields.vatRate === "exempt" ? "exonéré" : `${fields.vatRate ?? "20"}%`})</span>
-                <span className="tnum font-mono">{formatMAD(fields.vat)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-1.5 font-bold text-foreground text-xs">
-                <span>Total TTC</span>
-                <span className="tnum font-mono">{formatMAD(fields.total)}</span>
-              </div>
-            </div>
-
-            {/* Stamp overlay */}
-            {(st === "paid" || st === "overdue") && (
-              <div className="flex justify-center border-t px-5 py-3">
-                <span className={cn(
-                  "rotate-[-8deg] rounded border-2 px-3 py-1 text-[10px] font-bold uppercase tracking-widest opacity-50",
-                  st === "paid"    ? "border-emerald-500 text-emerald-600" : "border-red-500 text-red-600",
-                )}>
-                  {st === "paid" ? "Payée" : "En retard"}
-                </span>
-              </div>
-            )}
+      {/* ── TOP: compact data fields ── */}
+      <div className="shrink-0 border-b bg-background px-5 py-4">
+        <div className="grid grid-cols-[2fr_1.2fr_1fr_1fr_1fr] gap-3">
+          <FormField label="Fournisseur" value={fields.supplier} onChange={(v) => set("supplier", v)} />
+          <FormField label="N° Facture" value={fields.number} onChange={(v) => set("number", v)} mono />
+          <FormField label="Date" value={fields.date} onChange={(v) => set("date", v)} type="date" />
+          <FormField label="Échéance" value={fields.dueDate} onChange={(v) => set("dueDate", v)} type="date" />
+          {/* Status */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Statut</label>
+            <select
+              value={fields.status}
+              onChange={(e) => set("status", e.target.value as SupplierInvoice["status"])}
+              className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="draft">À confirmer</option>
+              <option value="validated">Validée</option>
+              <option value="paid">Payée</option>
+            </select>
           </div>
-            </>
+        </div>
+
+        {/* Amounts row */}
+        <div className="mt-3 grid grid-cols-[1fr_0.8fr_1fr_1.2fr] gap-3 items-end">
+          <FormNumberField label="Montant HT" value={fields.amountHT} onChange={(v) => set("amountHT", v)} />
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">TVA</label>
+            <select
+              value={fields.vatRate ?? "20"}
+              onChange={(e) => set("vatRate", e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {VAT_RATES.map((r) => (
+                <option key={r} value={r}>{r === "exempt" ? "Exonéré" : `${r}%`}</option>
+              ))}
+            </select>
+          </div>
+          <FormNumberField label="Montant TVA" value={fields.vat} onChange={(v) => set("vat", v)} muted />
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Total TTC</p>
+            <p className="tnum font-mono text-lg font-bold">{formatMAD(fields.total)}</p>
+          </div>
+        </div>
+
+        {st === "overdue" && (
+          <p className="mt-2 flex items-center gap-1 text-xs text-destructive">
+            <AlertCircle className="size-3 shrink-0" />
+            Échéance dépassée — statut "En retard" calculé automatiquement
+          </p>
+        )}
+      </div>
+
+      {/* ── BOTTOM: document viewer ── */}
+      <div className="flex flex-1 flex-col overflow-hidden bg-muted/10">
+        {/* Sub-header */}
+        <div className="flex shrink-0 items-center justify-between border-b bg-background px-5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            {fields.fileUrl ? "Document original" : "Aperçu"}
+          </p>
+          {fields.fileUrl && (
+            <a
+              href={fields.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] font-medium text-primary hover:underline"
+            >
+              Ouvrir ↗
+            </a>
           )}
         </div>
 
-        {/* Editable form */}
-        <div className="flex-1 overflow-y-auto p-5">
-          <p className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Modifier la facture
-          </p>
+        {/* Real file */}
+        {iframeSrc && (
+          <div className="flex-1 overflow-hidden">
+            {fields.fileType === "image" ? (
+              <div className="h-full overflow-y-auto p-4">
+                <img src={iframeSrc} alt="Facture" className="w-full rounded-lg object-contain shadow-sm" />
+              </div>
+            ) : (
+              <iframe src={iframeSrc} title="Aperçu facture" className="h-full w-full border-0" />
+            )}
+          </div>
+        )}
 
-          <div className="space-y-3 max-w-sm">
-            <FormField
-              label="Fournisseur"
-              value={fields.supplier}
-              onChange={(v) => set("supplier", v)}
-            />
-            <FormField
-              label="N° Facture"
-              value={fields.number}
-              onChange={(v) => set("number", v)}
-              mono
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                label="Date facture"
-                value={fields.date}
-                onChange={(v) => set("date", v)}
-                type="date"
-              />
-              <FormField
-                label="Échéance"
-                value={fields.dueDate}
-                onChange={(v) => set("dueDate", v)}
-                type="date"
-              />
-            </div>
-
-            {/* Amounts block */}
-            <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
-              <p className="text-xs font-medium text-muted-foreground">Montants</p>
-              <div className="grid grid-cols-2 gap-3">
-                <FormNumberField
-                  label="Montant HT"
-                  value={fields.amountHT}
-                  onChange={(v) => set("amountHT", v)}
-                />
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Taux TVA</label>
-                  <select
-                    value={fields.vatRate ?? "20"}
-                    onChange={(e) => set("vatRate", e.target.value)}
-                    className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    {VAT_RATES.map((r) => (
-                      <option key={r} value={r}>
-                        {r === "exempt" ? "Exonéré" : `${r}%`}
-                      </option>
-                    ))}
-                  </select>
+        {/* Styled card fallback */}
+        {!iframeSrc && (
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="mx-auto max-w-lg rounded-xl border bg-white shadow-sm overflow-hidden text-[12px]">
+              <div className="border-b px-6 pt-6 pb-4">
+                <p className="text-3xl font-black tracking-tight">Facture</p>
+                <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-1 text-[11px]">
+                  <div className="flex gap-2"><span className="w-20 shrink-0 font-medium">N° Facture</span><span className="font-mono">{fields.number}</span></div>
+                  <div className="flex gap-2"><span className="w-20 shrink-0 font-medium">Date</span><span>{formatDate(fields.date)}</span></div>
+                  <div className="flex gap-2">
+                    <span className={cn("w-20 shrink-0 font-medium", st === "overdue" && "text-destructive")}>Échéance</span>
+                    <span className={cn(st === "overdue" && "font-semibold text-destructive")}>{formatDate(fields.dueDate)}</span>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 items-end">
-                <FormNumberField
-                  label="TVA"
-                  value={fields.vat}
-                  onChange={(v) => set("vat", v)}
-                  muted
-                />
+              <div className="grid grid-cols-2 gap-4 border-b px-6 py-4 text-[11px]">
                 <div>
-                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Total TTC</p>
-                  <p className="tnum font-mono text-xl font-bold leading-9">
-                    {formatMAD(fields.total)}
-                  </p>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">De</p>
+                  <p className="font-bold">Argan Digital SARL</p>
+                  <p className="text-muted-foreground">Casablanca, Maroc</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Fournisseur</p>
+                  <p className="font-bold">{fields.supplier}</p>
+                  <div className="flex items-center gap-1 text-muted-foreground mt-0.5">
+                    <SrcIcon className="size-3" /><span>{srcLabel}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Status selector — overdue is never a manual choice */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Statut</label>
-              <select
-                value={fields.status}
-                onChange={(e) => set("status", e.target.value as SupplierInvoice["status"])}
-                className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="draft">À confirmer</option>
-                <option value="validated">Validée</option>
-                <option value="paid">Payée</option>
-              </select>
-              {st === "overdue" && (
-                <p className="flex items-center gap-1 text-xs text-destructive">
-                  <AlertCircle className="size-3 shrink-0" />
-                  Échéance dépassée — marquée automatiquement "En retard"
-                </p>
+              <div className="space-y-1.5 px-6 py-4 text-[11px]">
+                <div className="flex justify-between text-muted-foreground"><span>Montant HT</span><span className="tnum font-mono">{formatMAD(fields.amountHT)}</span></div>
+                <div className="flex justify-between text-muted-foreground"><span>TVA {fields.vatRate === "exempt" ? "(exonéré)" : `${fields.vatRate ?? "20"}%`}</span><span className="tnum font-mono">{formatMAD(fields.vat)}</span></div>
+                <div className="flex justify-between border-t pt-2 font-bold"><span>Total TTC</span><span className="tnum font-mono">{formatMAD(fields.total)}</span></div>
+              </div>
+              {(st === "paid" || st === "overdue") && (
+                <div className="flex justify-center border-t px-6 py-4">
+                  <span className={cn("rotate-[-8deg] rounded border-2 px-3 py-1 text-[10px] font-bold uppercase tracking-widest opacity-50",
+                    st === "paid" ? "border-emerald-500 text-emerald-600" : "border-red-500 text-red-600")}>
+                    {st === "paid" ? "Payée" : "En retard"}
+                  </span>
+                </div>
               )}
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
