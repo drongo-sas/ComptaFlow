@@ -1,4 +1,4 @@
-# Comptia — Démo (Espace entreprise)
+# ComptaFlow — Démo (Espace entreprise)
 
 Plateforme collaborative de pré-comptabilité pour les entreprises marocaines et leurs
 comptables. Cette démo couvre **l'espace entreprise** (côté client).
