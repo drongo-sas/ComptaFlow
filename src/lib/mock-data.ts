@@ -354,6 +354,19 @@ export const supplierInvoices: SupplierInvoice[] = [
     source: "scan",
     status: "validated",
   },
+  {
+    id: "s6",
+    supplier: "BEL S.A",
+    number: "F-2026-03",
+    date: "2026-03-30",
+    dueDate: "2026-04-30",
+    amountHT: 13600,
+    vat: 2720,
+    total: 16320,
+    vatRate: "20",
+    source: "upload",
+    status: "draft",
+  },
 ];
 
 export interface Expense {

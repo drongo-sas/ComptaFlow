@@ -385,57 +385,82 @@ function InvoiceDetail({
             Document
           </p>
 
-          <div className="rounded-xl border bg-white p-5 shadow-sm">
-            {/* Supplier row */}
-            <div className="mb-4 flex items-center gap-2.5 border-b pb-4">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-                {fields.supplier.charAt(0)}
+          <div className="rounded-xl border bg-white shadow-sm overflow-hidden text-[12px]">
+            {/* Invoice header */}
+            <div className="border-b px-5 pt-5 pb-4">
+              <p className="text-2xl font-black tracking-tight text-foreground">Facture</p>
+              <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
+                <div className="flex gap-3">
+                  <span className="w-24 shrink-0 font-medium text-foreground">N° Facture</span>
+                  <span className="font-mono">{fields.number}</span>
+                </div>
+                <div className="flex gap-3">
+                  <span className="w-24 shrink-0 font-medium text-foreground">Date</span>
+                  <span>{formatDate(fields.date)}</span>
+                </div>
+                <div className="flex gap-3">
+                  <span className={cn("w-24 shrink-0 font-medium", st === "overdue" ? "text-destructive" : "text-foreground")}>Échéance</span>
+                  <span className={st === "overdue" ? "font-semibold text-destructive" : ""}>{formatDate(fields.dueDate)}</span>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="truncate font-bold text-sm">{fields.supplier}</p>
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <SrcIcon className="size-3" />
+            </div>
+
+            {/* From / To */}
+            <div className="grid grid-cols-2 gap-3 border-b px-5 py-4 text-[11px]">
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">De</p>
+                <p className="font-bold text-foreground">Argan Digital SARL</p>
+                <p className="text-muted-foreground">123 Bd Zerktouni</p>
+                <p className="text-muted-foreground">Casablanca 20100</p>
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">À</p>
+                <p className="font-bold text-foreground">{fields.supplier}</p>
+                <div className="flex items-center gap-1 mt-0.5 text-muted-foreground">
+                  <SrcIcon className="size-3 shrink-0" />
                   <span>{srcLabel}</span>
                 </div>
               </div>
             </div>
 
-            {/* Meta grid */}
-            <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
-              <MetaRow label="N° Facture" value={fields.number} mono />
-              <MetaRow label="Date" value={formatDate(fields.date)} />
-              <MetaRow
-                label="Échéance"
-                value={formatDate(fields.dueDate)}
-                className={st === "overdue" ? "text-destructive font-semibold" : ""}
-              />
-              <MetaRow
-                label="TVA"
-                value={fields.vatRate === "exempt" ? "Exonéré" : `${fields.vatRate ?? "20"}%`}
-              />
-            </div>
-
-            {/* Amounts */}
-            <div className="space-y-1.5 rounded-lg bg-muted/50 p-3 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Montant HT</span>
-                <span className="tnum font-mono font-medium">{formatMAD(fields.amountHT)}</span>
+            {/* Line items */}
+            <div className="border-b px-5 py-3">
+              <div className="mb-1.5 grid grid-cols-[1fr_auto] gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <span>Description</span>
+                <span className="text-right">Total HT</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">TVA</span>
-                <span className="tnum font-mono text-muted-foreground">{formatMAD(fields.vat)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-1.5">
-                <span className="font-semibold">Total TTC</span>
-                <span className="tnum font-mono font-bold">{formatMAD(fields.total)}</span>
+              <div className="grid grid-cols-[1fr_auto] gap-2 py-2 text-[11px]">
+                <div>
+                  <p className="font-medium text-foreground">Prestation de service</p>
+                  <p className="text-muted-foreground">
+                    {fields.vatRate === "exempt" ? "Exonéré de TVA" : `TVA ${fields.vatRate ?? "20"}%`}
+                  </p>
+                </div>
+                <span className="tnum font-mono font-semibold self-start">{formatMAD(fields.amountHT)}</span>
               </div>
             </div>
 
-            {/* Stamp */}
+            {/* Totals */}
+            <div className="space-y-1.5 px-5 py-3 text-[11px]">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Total HT</span>
+                <span className="tnum font-mono">{formatMAD(fields.amountHT)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>TVA ({fields.vatRate === "exempt" ? "exonéré" : `${fields.vatRate ?? "20"}%`})</span>
+                <span className="tnum font-mono">{formatMAD(fields.vat)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1.5 font-bold text-foreground text-xs">
+                <span>Total TTC</span>
+                <span className="tnum font-mono">{formatMAD(fields.total)}</span>
+              </div>
+            </div>
+
+            {/* Stamp overlay */}
             {(st === "paid" || st === "overdue") && (
-              <div className="mt-4 flex justify-center">
+              <div className="flex justify-center border-t px-5 py-3">
                 <span className={cn(
-                  "rotate-[-8deg] rounded border-2 px-3 py-1 text-[11px] font-bold uppercase tracking-widest opacity-50",
+                  "rotate-[-8deg] rounded border-2 px-3 py-1 text-[10px] font-bold uppercase tracking-widest opacity-50",
                   st === "paid"    ? "border-emerald-500 text-emerald-600" : "border-red-500 text-red-600",
                 )}>
                   {st === "paid" ? "Payée" : "En retard"}
