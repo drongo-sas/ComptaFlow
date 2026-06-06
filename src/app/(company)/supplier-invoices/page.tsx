@@ -388,10 +388,18 @@ function InvoiceDetail({
           {/* ── Real file embed ── */}
           {fields.fileUrl && (
             <>
-              <div className="flex shrink-0 items-center border-b bg-background px-4 py-2">
+              <div className="flex shrink-0 items-center justify-between border-b bg-background px-4 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Document original
                 </p>
+                <a
+                  href={fields.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-medium text-primary hover:underline"
+                >
+                  Ouvrir ↗
+                </a>
               </div>
               <div className="flex-1 overflow-hidden bg-muted/20">
                 {fields.fileType === "image" ? (
@@ -404,7 +412,12 @@ function InvoiceDetail({
                   </div>
                 ) : (
                   <iframe
-                    src={fields.fileUrl}
+                    // blob: URLs embed directly; https: URLs go through proxy to force inline
+                    src={
+                      fields.fileUrl.startsWith("blob:")
+                        ? fields.fileUrl
+                        : `/api/pdf-proxy?url=${encodeURIComponent(fields.fileUrl)}`
+                    }
                     title="Aperçu facture"
                     className="h-full w-full border-0"
                   />
