@@ -3,11 +3,15 @@
 import { useState, useMemo } from "react";
 import {
   Plus, Search, Mail, Copy, Check, Sparkles, Upload, ScanLine,
-  FileText, CheckCircle2, CreditCard, AlertCircle,
+  FileText, CheckCircle2, CreditCard, AlertCircle, X,
 } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import { supplierInvoices as seed, type SupplierInvoice } from "@/lib/mock-data";
 import { formatMAD, formatDate, cn } from "@/lib/utils";
 import { UploadInvoiceModal } from "./upload-modal";
@@ -65,18 +69,23 @@ function effectiveStatus(inv: SupplierInvoice): SupplierInvoice["status"] {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SupplierInvoicesPage() {
-  const [invoices, setInvoices]       = useState<SupplierInvoice[]>(seed);
-  const [selected, setSelected]       = useState<SupplierInvoice | null>(null);
-  const [filter, setFilter]           = useState<FilterKey>("all");
-  const [search, setSearch]           = useState("");
-  const [uploadOpen, setUploadOpen]   = useState(false);
-  const [copied, setCopied]           = useState(false);
+  const [invoices, setInvoices]     = useState<SupplierInvoice[]>(seed);
+  const [selected, setSelected]     = useState<SupplierInvoice | null>(null);
+  const [filter, setFilter]         = useState<FilterKey>("all");
+  const [search, setSearch]         = useState("");
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [copied, setCopied]         = useState(false);
 
   const counts = useMemo(() => {
     const c = { all: invoices.length, draft: 0, validated: 0, paid: 0, overdue: 0 };
     invoices.forEach((inv) => { c[effectiveStatus(inv)]++; });
     return c;
   }, [invoices]);
+
+  const totalDuMois = useMemo(
+    () => invoices.reduce((s, inv) => s + inv.total, 0),
+    [invoices],
+  );
 
   const filtered = useMemo(
     () =>
@@ -114,6 +123,42 @@ export default function SupplierInvoicesPage() {
     setTimeout(() => setCopied(false), 1800);
   }
 
+  // Shared filter tabs component (used in both views)
+  const filterTabs = (
+    <div className="flex gap-1 overflow-x-auto">
+      {FILTERS.map(({ key, label }) => {
+        const count = counts[key] ?? 0;
+        const active = filter === key;
+        return (
+          <button
+            key={key}
+            onClick={() => setFilter(key)}
+            className={cn(
+              "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+              active
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:bg-muted",
+            )}
+          >
+            {label}
+            {count > 0 && (
+              <span
+                className={cn(
+                  "min-w-[16px] rounded-full px-1 text-center text-[10px] font-semibold tabular-nums",
+                  active
+                    ? "bg-background/20 text-background"
+                    : "bg-muted-foreground/15 text-muted-foreground",
+                )}
+              >
+                {count}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <>
       <Topbar
@@ -121,156 +166,292 @@ export default function SupplierInvoicesPage() {
         subtitle={`${invoices.length} factures · ${counts.draft} à confirmer`}
       />
 
-      {/* ── Split layout ──────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      {selected ? (
+        /* ── SPLIT VIEW: row clicked → narrow list + detail panel ── */
+        <div className="flex flex-1 overflow-hidden">
 
-        {/* ── LEFT: Invoice list ── */}
-        <div className="flex w-[320px] shrink-0 flex-col border-r bg-background">
+          {/* Left: narrow list (320 px) */}
+          <div className="flex w-[320px] shrink-0 flex-col border-r bg-background">
 
-          {/* List header */}
-          <div className="flex items-center justify-between px-4 py-3">
-            <p className="text-sm font-semibold text-muted-foreground">
-              {filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
-            </p>
-            <Button size="sm" onClick={() => setUploadOpen(true)}>
-              <Plus className="size-3.5" />
-              Ajouter
-            </Button>
-          </div>
-
-          {/* Search */}
-          <div className="px-3 pb-2">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Fournisseur, n° facture…"
-                className="h-8 w-full rounded-md border bg-muted/50 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <p className="text-sm font-semibold text-muted-foreground">
+                {filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
+              </p>
+              <Button size="sm" onClick={() => setUploadOpen(true)}>
+                <Plus className="size-3.5" />
+                Ajouter
+              </Button>
             </div>
-          </div>
 
-          {/* Filter tabs */}
-          <div className="flex gap-1 overflow-x-auto border-b px-3 pb-2">
-            {FILTERS.map(({ key, label }) => {
-              const count = counts[key] ?? 0;
-              const active = filter === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setFilter(key)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                    active
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  {label}
-                  {count > 0 && (
-                    <span
+            {/* Search */}
+            <div className="px-3 pb-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Fournisseur, n° facture…"
+                  className="h-8 w-full rounded-md border bg-muted/50 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </div>
+
+            {/* Filter tabs */}
+            <div className="overflow-x-auto border-b px-3 pb-2">
+              {filterTabs}
+            </div>
+
+            {/* Invoice rows */}
+            <div className="flex-1 overflow-y-auto">
+              {filtered.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-16 text-center">
+                  <FileText className="size-7 text-muted-foreground/30" />
+                  <p className="text-xs text-muted-foreground">Aucune facture</p>
+                </div>
+              ) : (
+                filtered.map((inv) => {
+                  const st  = effectiveStatus(inv);
+                  const sc  = STATUS[st];
+                  const sel = selected?.id === inv.id;
+                  return (
+                    <button
+                      key={inv.id}
+                      onClick={() => setSelected(inv)}
                       className={cn(
-                        "min-w-[16px] rounded-full px-1 text-center text-[10px] font-semibold tabular-nums",
-                        active ? "bg-background/20 text-background" : "bg-muted-foreground/15 text-muted-foreground",
+                        "flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors",
+                        sel
+                          ? "border-l-2 border-l-primary bg-primary/6"
+                          : "border-l-2 border-l-transparent hover:bg-muted/50",
                       )}
                     >
-                      {count}
-                    </span>
-                  )}
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+                        {inv.supplier.charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="truncate text-sm font-semibold leading-tight">{inv.supplier}</p>
+                          <p className="tnum shrink-0 font-mono text-sm font-semibold">{formatMAD(inv.total)}</p>
+                        </div>
+                        <div className="mt-0.5 flex items-center justify-between">
+                          <p className="font-mono text-[11px] text-muted-foreground">{inv.number}</p>
+                          <span className={cn("size-1.5 shrink-0 rounded-full", sc.dot)} />
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Email strip (compact, inside narrow list) */}
+            <div className="shrink-0 border-t p-3">
+              <div className="flex items-center gap-1.5 rounded-lg bg-muted/60 px-2.5 py-2">
+                <Mail className="size-3 shrink-0 text-muted-foreground" />
+                <p className="min-w-0 flex-1 truncate font-mono text-[10px] text-muted-foreground">
+                  {INVOICE_EMAIL}
+                </p>
+                <button
+                  onClick={copyEmail}
+                  className={cn("transition-colors", copied ? "text-success" : "text-muted-foreground hover:text-foreground")}
+                >
+                  {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
                 </button>
-              );
-            })}
-          </div>
-
-          {/* Invoice rows */}
-          <div className="flex-1 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-16 text-center">
-                <FileText className="size-7 text-muted-foreground/30" />
-                <p className="text-xs text-muted-foreground">Aucune facture</p>
+                <button
+                  onClick={simulateEmail}
+                  className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10"
+                >
+                  <Sparkles className="size-2.5" />
+                  Simuler
+                </button>
               </div>
-            ) : (
-              filtered.map((inv) => {
-                const st  = effectiveStatus(inv);
-                const sc  = STATUS[st];
-                const sel = selected?.id === inv.id;
-                return (
-                  <button
-                    key={inv.id}
-                    onClick={() => setSelected(inv)}
-                    className={cn(
-                      "flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors",
-                      sel
-                        ? "border-l-2 border-l-primary bg-primary/6"
-                        : "border-l-2 border-l-transparent hover:bg-muted/50",
-                    )}
-                  >
-                    {/* Avatar */}
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
-                      {inv.supplier.charAt(0)}
-                    </div>
-
-                    {/* Info */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate text-sm font-semibold leading-tight">{inv.supplier}</p>
-                        <p className="tnum shrink-0 font-mono text-sm font-semibold">{formatMAD(inv.total)}</p>
-                      </div>
-                      <div className="mt-0.5 flex items-center justify-between">
-                        <p className="font-mono text-[11px] text-muted-foreground">{inv.number}</p>
-                        <span className={cn("size-1.5 shrink-0 rounded-full", sc.dot)} />
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-
-          {/* Email footer — compact */}
-          <div className="shrink-0 border-t p-3">
-            <div className="flex items-center gap-1.5 rounded-lg bg-muted/60 px-2.5 py-2">
-              <Mail className="size-3 shrink-0 text-muted-foreground" />
-              <p className="min-w-0 flex-1 truncate font-mono text-[10px] text-muted-foreground">
-                {INVOICE_EMAIL}
-              </p>
-              <button
-                onClick={copyEmail}
-                className={cn("transition-colors", copied ? "text-success" : "text-muted-foreground hover:text-foreground")}
-              >
-                {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-              </button>
-              <button
-                onClick={simulateEmail}
-                className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10"
-              >
-                <Sparkles className="size-2.5" />
-                Simuler
-              </button>
             </div>
           </div>
-        </div>
 
-        {/* ── RIGHT: Invoice detail ── */}
-        {selected ? (
+          {/* Right: Invoice detail */}
           <InvoiceDetail
             key={selected.id}
             invoice={selected}
             onSave={handleSave}
+            onClose={() => setSelected(null)}
           />
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 bg-muted/10">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-muted">
-              <FileText className="size-5 text-muted-foreground" />
+        </div>
+      ) : (
+        /* ── FULL VIEW: nothing selected → KPIs + email card + full table ── */
+        <div className="flex-1 overflow-y-auto bg-paper">
+          <div className="space-y-5 p-6">
+
+            {/* KPI strip */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <KpiCard
+                label="Total du mois"
+                value={formatMAD(totalDuMois)}
+                sub={`${invoices.length} facture${invoices.length !== 1 ? "s" : ""}`}
+              />
+              <KpiCard
+                label="À valider"
+                value={String(counts.draft)}
+                sub="factures en attente"
+                tone="warning"
+              />
+              <KpiCard
+                label="En retard"
+                value={String(counts.overdue)}
+                sub={counts.overdue > 0 ? "échéances dépassées" : "Aucun retard"}
+                tone={counts.overdue > 0 ? "danger" : "default"}
+              />
             </div>
-            <p className="text-sm font-medium text-muted-foreground">Sélectionnez une facture</p>
-            <p className="text-xs text-muted-foreground/50">
-              Cliquez sur une facture pour voir et modifier ses données
-            </p>
+
+            {/* Email reception card */}
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                      <Mail className="size-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Réception par email</p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        Transmettez vos factures fournisseurs à cette adresse — elles seront
+                        automatiquement importées et analysées par l&apos;IA.
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <code className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
+                          {INVOICE_EMAIL}
+                        </code>
+                        <button
+                          onClick={copyEmail}
+                          className={cn(
+                            "flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium transition-colors",
+                            copied
+                              ? "text-success"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          )}
+                        >
+                          {copied ? (
+                            <><Check className="size-3" /> Copié</>
+                          ) : (
+                            <><Copy className="size-3" /> Copier</>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={simulateEmail}
+                  >
+                    <Sparkles className="size-3.5" />
+                    Simuler réception
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Toolbar: search + filters + add */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full max-w-xs">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Fournisseur, n° facture…"
+                  className="h-8 w-full rounded-md border bg-background pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div className="flex-1">
+                {filterTabs}
+              </div>
+              <Button size="sm" onClick={() => setUploadOpen(true)}>
+                <Plus className="size-3.5" />
+                Ajouter
+              </Button>
+            </div>
+
+            {/* Full table */}
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fournisseur</TableHead>
+                    <TableHead>N° Facture</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Échéance</TableHead>
+                    <TableHead className="text-right">TVA</TableHead>
+                    <TableHead className="text-right">Total TTC</TableHead>
+                    <TableHead>Statut</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center gap-2">
+                          <FileText className="size-7 text-muted-foreground/30" />
+                          <p className="text-sm">Aucune facture</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filtered.map((inv) => {
+                      const st = effectiveStatus(inv);
+                      const sc = STATUS[st];
+                      const { Icon: SrcIcon, label: srcLabel } = SOURCE_LABELS[inv.source];
+                      return (
+                        <TableRow
+                          key={inv.id}
+                          className="cursor-pointer"
+                          onClick={() => setSelected(inv)}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                                {inv.supplier.charAt(0)}
+                              </div>
+                              <span className="font-medium">{inv.supplier}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm text-muted-foreground">
+                            {inv.number}
+                          </TableCell>
+                          <TableCell>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <SrcIcon className="size-3.5" />
+                              {srcLabel}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-sm">{formatDate(inv.date)}</TableCell>
+                          <TableCell
+                            className={cn(
+                              "text-sm",
+                              st === "overdue" && "font-semibold text-destructive",
+                            )}
+                          >
+                            {formatDate(inv.dueDate)}
+                          </TableCell>
+                          <TableCell className="tnum text-right font-mono text-sm text-muted-foreground">
+                            {formatMAD(inv.vat)}
+                          </TableCell>
+                          <TableCell className="tnum text-right font-mono text-sm font-semibold">
+                            {formatMAD(inv.total)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={sc.variant}>{sc.label}</Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {uploadOpen && (
         <UploadInvoiceModal
@@ -283,14 +464,49 @@ export default function SupplierInvoicesPage() {
   );
 }
 
+// ── KPI card ─────────────────────────────────────────────────────────────────
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: "default" | "warning" | "danger";
+}) {
+  const valueClass =
+    tone === "warning"
+      ? "text-warning-foreground"
+      : tone === "danger"
+        ? "text-destructive"
+        : "text-foreground";
+
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className={cn("tnum mt-2 font-mono text-2xl font-semibold tracking-tight", valueClass)}>
+          {value}
+        </p>
+        {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Invoice detail panel ──────────────────────────────────────────────────────
 
 function InvoiceDetail({
   invoice,
   onSave,
+  onClose,
 }: {
   invoice: SupplierInvoice;
   onSave: (id: string, patch: Partial<SupplierInvoice>) => void;
+  onClose: () => void;
 }) {
   const [fields, setFields] = useState({ ...invoice });
   const [saved,  setSaved]  = useState(false);
@@ -351,6 +567,13 @@ function InvoiceDetail({
       {/* ── Header ── */}
       <div className="flex shrink-0 items-center justify-between border-b bg-background px-5 py-3">
         <div className="flex items-center gap-3">
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted"
+            title="Fermer"
+          >
+            <X className="size-4" />
+          </button>
           <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold">
             {fields.supplier.charAt(0)}
           </div>
@@ -378,14 +601,40 @@ function InvoiceDetail({
         </div>
       </div>
 
-      {/* ── TOP: compact data fields ── */}
+      {/* ── TOP: form fields, max 2 per row ── */}
       <div className="shrink-0 border-b bg-background px-5 py-4">
-        <div className="grid grid-cols-[2fr_1.2fr_1fr_1fr_1fr] gap-3">
+        <div className="grid max-w-2xl grid-cols-2 gap-x-6 gap-y-3">
+
           <FormField label="Fournisseur" value={fields.supplier} onChange={(v) => set("supplier", v)} />
-          <FormField label="N° Facture" value={fields.number} onChange={(v) => set("number", v)} mono />
-          <FormField label="Date" value={fields.date} onChange={(v) => set("date", v)} type="date" />
-          <FormField label="Échéance" value={fields.dueDate} onChange={(v) => set("dueDate", v)} type="date" />
-          {/* Status */}
+          <FormField label="N° Facture"  value={fields.number}   onChange={(v) => set("number", v)} mono />
+
+          <FormField label="Date facture" value={fields.date}    onChange={(v) => set("date", v)}    type="date" />
+          <FormField label="Échéance"     value={fields.dueDate} onChange={(v) => set("dueDate", v)} type="date" />
+
+          <FormNumberField label="Montant HT" value={fields.amountHT} onChange={(v) => set("amountHT", v)} />
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Taux TVA</label>
+            <select
+              value={fields.vatRate ?? "20"}
+              onChange={(e) => set("vatRate", e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {VAT_RATES.map((r) => (
+                <option key={r} value={r}>{r === "exempt" ? "Exonéré" : `${r}%`}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-end gap-4">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">TVA</p>
+              <p className="tnum mt-1.5 font-mono text-sm text-muted-foreground">{formatMAD(fields.vat)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Total TTC</p>
+              <p className="tnum mt-1 font-mono text-xl font-bold">{formatMAD(fields.total)}</p>
+            </div>
+          </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Statut</label>
             <select
@@ -397,42 +646,18 @@ function InvoiceDetail({
               <option value="validated">Validée</option>
               <option value="paid">Payée</option>
             </select>
+            {st === "overdue" && (
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="size-3 shrink-0" />
+                Échéance dépassée — &quot;En retard&quot; automatique
+              </p>
+            )}
           </div>
         </div>
-
-        {/* Amounts row */}
-        <div className="mt-3 grid grid-cols-[1fr_0.8fr_1fr_1.2fr] gap-3 items-end">
-          <FormNumberField label="Montant HT" value={fields.amountHT} onChange={(v) => set("amountHT", v)} />
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">TVA</label>
-            <select
-              value={fields.vatRate ?? "20"}
-              onChange={(e) => set("vatRate", e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              {VAT_RATES.map((r) => (
-                <option key={r} value={r}>{r === "exempt" ? "Exonéré" : `${r}%`}</option>
-              ))}
-            </select>
-          </div>
-          <FormNumberField label="Montant TVA" value={fields.vat} onChange={(v) => set("vat", v)} muted />
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">Total TTC</p>
-            <p className="tnum font-mono text-lg font-bold">{formatMAD(fields.total)}</p>
-          </div>
-        </div>
-
-        {st === "overdue" && (
-          <p className="mt-2 flex items-center gap-1 text-xs text-destructive">
-            <AlertCircle className="size-3 shrink-0" />
-            Échéance dépassée — statut "En retard" calculé automatiquement
-          </p>
-        )}
       </div>
 
       {/* ── BOTTOM: document viewer ── */}
       <div className="flex flex-1 flex-col overflow-hidden bg-muted/10">
-        {/* Sub-header */}
         <div className="flex shrink-0 items-center justify-between border-b bg-background px-5 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             {fields.fileUrl ? "Document original" : "Aperçu"}
@@ -449,20 +674,20 @@ function InvoiceDetail({
           )}
         </div>
 
-        {/* Real file */}
         {iframeSrc && (
-          <div className="flex-1 overflow-hidden">
-            {fields.fileType === "image" ? (
-              <div className="h-full overflow-y-auto p-4">
-                <img src={iframeSrc} alt="Facture" className="w-full rounded-lg object-contain shadow-sm" />
-              </div>
-            ) : (
-              <iframe src={iframeSrc} title="Aperçu facture" className="h-full w-full border-0" />
-            )}
+          <div className="flex flex-1 items-start justify-center overflow-hidden p-5">
+            <div className="h-full w-full max-w-2xl rounded-xl border shadow-sm overflow-hidden bg-white">
+              {fields.fileType === "image" ? (
+                <div className="h-full overflow-y-auto">
+                  <img src={iframeSrc} alt="Facture" className="w-full object-contain" />
+                </div>
+              ) : (
+                <iframe src={iframeSrc} title="Aperçu facture" className="h-full w-full border-0" />
+              )}
+            </div>
           </div>
         )}
 
-        {/* Styled card fallback */}
         {!iframeSrc && (
           <div className="flex-1 overflow-y-auto p-5">
             <div className="mx-auto max-w-lg rounded-xl border bg-white shadow-sm overflow-hidden text-[12px]">
@@ -512,22 +737,7 @@ function InvoiceDetail({
   );
 }
 
-// ── Small display helpers ─────────────────────────────────────────────────────
-
-function MetaRow({
-  label, value, mono, className,
-}: {
-  label: string; value: string; mono?: boolean; className?: string;
-}) {
-  return (
-    <div>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
-      <p className={cn("mt-0.5 text-xs font-semibold", mono && "font-mono", className)}>
-        {value}
-      </p>
-    </div>
-  );
-}
+// ── Small form helpers ────────────────────────────────────────────────────────
 
 function FormField({
   label, value, onChange, type = "text", mono,
