@@ -291,6 +291,8 @@ export interface SupplierInvoice {
   vatRate?: string;
   source: "scan" | "email" | "upload";
   status: "draft" | "validated" | "paid" | "overdue";
+  fileUrl?: string;
+  fileType?: "pdf" | "image";
 }
 
 export const supplierInvoices: SupplierInvoice[] = [

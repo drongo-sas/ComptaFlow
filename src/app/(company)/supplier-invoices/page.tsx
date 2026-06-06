@@ -379,8 +379,43 @@ function InvoiceDetail({
       {/* Body — side by side */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* Document card */}
-        <div className="flex w-[42%] shrink-0 flex-col gap-3 overflow-y-auto border-r bg-muted/10 p-5">
+        {/* Document panel */}
+        <div className={cn(
+          "flex w-[42%] shrink-0 flex-col border-r",
+          fields.fileUrl ? "overflow-hidden" : "overflow-y-auto gap-3 bg-muted/10 p-5",
+        )}>
+
+          {/* ── Real file embed ── */}
+          {fields.fileUrl && (
+            <>
+              <div className="flex shrink-0 items-center border-b bg-background px-4 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Document original
+                </p>
+              </div>
+              <div className="flex-1 overflow-hidden bg-muted/20">
+                {fields.fileType === "image" ? (
+                  <div className="h-full overflow-y-auto p-4">
+                    <img
+                      src={fields.fileUrl}
+                      alt="Facture"
+                      className="w-full rounded-lg object-contain shadow-sm"
+                    />
+                  </div>
+                ) : (
+                  <iframe
+                    src={fields.fileUrl}
+                    title="Aperçu facture"
+                    className="h-full w-full border-0"
+                  />
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── Styled card fallback (no file) ── */}
+          {!fields.fileUrl && (
+            <>
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             Document
           </p>
@@ -468,6 +503,8 @@ function InvoiceDetail({
               </div>
             )}
           </div>
+            </>
+          )}
         </div>
 
         {/* Editable form */}

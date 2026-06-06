@@ -21,6 +21,8 @@ const VAT_RATES = ["20", "14", "10", "7", "0", "exempt"] as const;
 export function UploadInvoiceModal({ onClose, onAdd, source = "upload" }: Props) {
   const [step, setStep] = useState<"upload" | "extracting" | "review">("upload");
   const [file, setFile] = useState<File | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [fileType, setFileType] = useState<"pdf" | "image" | null>(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<ExtractedInvoice | null>(null);
@@ -30,6 +32,9 @@ export function UploadInvoiceModal({ onClose, onAdd, source = "upload" }: Props)
     setFile(f);
     setError(null);
     setStep("extracting");
+    const url = URL.createObjectURL(f);
+    setFileUrl(url);
+    setFileType(f.type.startsWith("image/") ? "image" : "pdf");
 
     try {
       const formData = new FormData();
@@ -84,8 +89,11 @@ export function UploadInvoiceModal({ onClose, onAdd, source = "upload" }: Props)
       amountHT: fields.amountHT,
       vat: fields.vat,
       total: fields.total,
+      vatRate: fields.vatRate,
       source,
       status: "draft",
+      fileUrl: fileUrl ?? undefined,
+      fileType: fileType ?? undefined,
     };
     onAdd(invoice);
     onClose();
