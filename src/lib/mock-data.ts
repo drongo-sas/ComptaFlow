@@ -368,6 +368,9 @@ export const supplierInvoices: SupplierInvoice[] = [
     vatRate: "20",
     source: "upload",
     status: "draft",
+    // R2 URL pattern — replace with real URL once Cloudflare R2 is configured
+    fileUrl: "https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf",
+    fileType: "pdf",
   },
 ];
 
