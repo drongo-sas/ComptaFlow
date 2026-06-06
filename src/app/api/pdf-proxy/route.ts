@@ -8,11 +8,18 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ALLOWED_CONTENT_TYPES = [
   "application/pdf",
+  "image/pdf",       // non-standard but served by some R2 buckets
   "image/jpeg",
   "image/png",
   "image/gif",
   "image/webp",
 ];
+
+// Normalize non-standard PDF mime types
+function normalizeContentType(ct: string): string {
+  if (ct === "image/pdf") return "application/pdf";
+  return ct;
+}
 
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get("url");
@@ -53,11 +60,12 @@ export async function GET(req: NextRequest) {
 
   const body = await upstream.arrayBuffer();
   const filename = url.pathname.split("/").pop() ?? "document.pdf";
+  const normalizedType = normalizeContentType(baseType);
 
   return new NextResponse(body, {
     status: 200,
     headers: {
-      "Content-Type": contentType,
+      "Content-Type": normalizedType,
       "Content-Disposition": `inline; filename="${filename}"`,
       "Cache-Control": "private, max-age=3600",
     },

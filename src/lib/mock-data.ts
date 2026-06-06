@@ -368,7 +368,7 @@ export const supplierInvoices: SupplierInvoice[] = [
     vatRate: "20",
     source: "upload",
     status: "draft",
-    fileUrl: "https://qendo.ai/370376ca-2474-4fbe-9c87-49e86b128281",
+    fileUrl: "https://pub-f81cd2c8eb2b46049d9680f0c4884eb9.r2.dev/receipts/69c060c7381881be45def1eb/732d1bd9-bd93-46d2-9fc5-ded093648bd7.pdf",
     fileType: "pdf",
   },
 ];
