@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+    /* Warm paper base */
+    --background: 40 30% 98%;
+    --foreground: 200 18% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 200 18% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 18% 12%;
+
+    /* Deep teal — calm, financial, trustworthy */
+    --primary: 176 62% 23%;
+    --primary-foreground: 40 30% 98%;
+
+    --secondary: 40 16% 94%;
+    --secondary-foreground: 200 18% 18%;
+
+    --muted: 40 14% 95%;
+    --muted-foreground: 200 8% 42%;
+
+    --accent: 176 40% 92%;
+    --accent-foreground: 176 62% 18%;
+
+    --destructive: 4 70% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 52% 34%;
+    --success-foreground: 0 0% 100%;
+
+    /* Amber — used for "uncategorized" / needs attention */
+    --warning: 32 90% 46%;
+    --warning-foreground: 30 40% 12%;
+
+    --border: 40 12% 88%;
+    --input: 40 12% 88%;
+    --ring: 176 62% 23%;
+
+    --radius: 0.75rem;
+
+    --sidebar: 180 22% 14%;
+    --sidebar-foreground: 170 14% 80%;
+    --sidebar-accent: 176 50% 24%;
+    --sidebar-border: 180 18% 22%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv01";
+  }
+  /* tabular figures everywhere amounts show up */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* subtle dotted texture behind content */
+.bg-paper {
+  background-image: radial-gradient(
+    hsl(200 12% 80% / 0.4) 0.5px,
+    transparent 0.5px
+  );
+  background-size: 22px 22px;
+}
