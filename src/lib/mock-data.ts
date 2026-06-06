@@ -368,9 +368,8 @@ export const supplierInvoices: SupplierInvoice[] = [
     vatRate: "20",
     source: "upload",
     status: "draft",
-    // Replace with actual Cloudflare R2 URL once storage is configured
-    // fileUrl: "https://your-bucket.r2.dev/invoices/F-2026-03.pdf",
-    // fileType: "pdf",
+    fileUrl: "https://qendo.ai/370376ca-2474-4fbe-9c87-49e86b128281",
+    fileType: "pdf",
   },
 ];
 
