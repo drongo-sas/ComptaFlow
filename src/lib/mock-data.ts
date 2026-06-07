@@ -375,66 +375,32 @@ export const supplierInvoices: SupplierInvoice[] = [
 
 export interface Expense {
   id: string;
-  title: string;
-  employee: string;
   date: string;
-  category: string;
-  amount: number;
-  hasReceipt: boolean;
-  status: "to_review" | "approved" | "rejected";
+  category: TxCategory;
+  description: string;
+  amountHT: number;
+  vatRate: "20" | "14" | "10" | "7" | "0" | "exempt";
+  vat: number;
+  total: number;
+  paidBy: "company_card" | "employee" | "cash";
+  status: "pending" | "validated" | "reimbursed" | "rejected";
+  submittedBy: string;
+  notes?: string;
+  receiptUrl?: string;
+  receiptType?: "image" | "pdf";
 }
 
 export const expenses: Expense[] = [
-  {
-    id: "e1",
-    title: "Déjeuner client",
-    employee: "Y. Bennani",
-    date: "2026-05-26",
-    category: "Restauration",
-    amount: 340,
-    hasReceipt: true,
-    status: "to_review",
-  },
-  {
-    id: "e2",
-    title: "Carburant",
-    employee: "S. El Amrani",
-    date: "2026-05-24",
-    category: "Déplacement",
-    amount: 540,
-    hasReceipt: true,
-    status: "approved",
-  },
-  {
-    id: "e3",
-    title: "Livraison Glovo",
-    employee: "Y. Bennani",
-    date: "2026-05-26",
-    category: "Divers",
-    amount: 284,
-    hasReceipt: false,
-    status: "to_review",
-  },
-  {
-    id: "e4",
-    title: "Fournitures bureau",
-    employee: "K. Tazi",
-    date: "2026-05-20",
-    category: "Bureau",
-    amount: 210,
-    hasReceipt: true,
-    status: "approved",
-  },
-  {
-    id: "e5",
-    title: "Parking aéroport",
-    employee: "S. El Amrani",
-    date: "2026-05-18",
-    category: "Déplacement",
-    amount: 120,
-    hasReceipt: false,
-    status: "rejected",
-  },
+  { id:"e1",  date:"2026-06-05", category:"meals",     description:"Déjeuner client — Atlas Distribution SARL", amountHT:416.67,  vatRate:"10", vat:41.67,  total:458.34,  paidBy:"employee",     status:"pending",    submittedBy:"Yassine B." },
+  { id:"e2",  date:"2026-06-04", category:"transport", description:"Taxi Aéroport Mohammed V → Casablanca",     amountHT:250,     vatRate:"14", vat:35,     total:285,     paidBy:"company_card", status:"validated",  submittedBy:"Yassine B." },
+  { id:"e3",  date:"2026-06-03", category:"supplies",  description:"Fournitures bureau — papeterie",             amountHT:583.33,  vatRate:"20", vat:116.67, total:700,     paidBy:"employee",     status:"pending",    submittedBy:"Fatima Z." },
+  { id:"e4",  date:"2026-06-02", category:"software",  description:"Abonnement Figma — juin 2026",               amountHT:500,     vatRate:"20", vat:100,    total:600,     paidBy:"company_card", status:"validated",  submittedBy:"Système" },
+  { id:"e5",  date:"2026-05-30", category:"transport", description:"Hébergement Hôtel Sofitel Rabat",            amountHT:2500,    vatRate:"10", vat:250,    total:2750,    paidBy:"company_card", status:"validated",  submittedBy:"Karim O." },
+  { id:"e6",  date:"2026-05-28", category:"meals",     description:"Repas équipe — fin de sprint mai",          amountHT:833.33,  vatRate:"10", vat:83.33,  total:916.66,  paidBy:"employee",     status:"reimbursed", submittedBy:"Yassine B." },
+  { id:"e7",  date:"2026-05-25", category:"transport", description:"Carburant — déplacement Rabat",              amountHT:400,     vatRate:"10", vat:40,     total:440,     paidBy:"cash",         status:"rejected",   submittedBy:"Karim O.", notes:"Justificatif manquant" },
+  { id:"e8",  date:"2026-05-20", category:"marketing", description:"Impression plaquettes commerciales",         amountHT:1666.67, vatRate:"20", vat:333.33, total:2000,    paidBy:"company_card", status:"reimbursed", submittedBy:"Fatima Z." },
+  { id:"e9",  date:"2026-05-15", category:"telecom",   description:"Facture Maroc Telecom — ligne pro",         amountHT:416.67,  vatRate:"20", vat:83.33,  total:500,     paidBy:"company_card", status:"validated",  submittedBy:"Système" },
+  { id:"e10", date:"2026-05-10", category:"meals",     description:"Déjeuner partenaires — Groupe Saham",       amountHT:1250,    vatRate:"10", vat:125,    total:1375,    paidBy:"employee",     status:"reimbursed", submittedBy:"Karim O." },
 ];
 
 export interface InvoiceLineItem {
