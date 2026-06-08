@@ -2,7 +2,7 @@ import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-export function Topbar({ title, subtitle }: { title: string; subtitle?: string }) {
+export function Topbar({ title, subtitle, initials = "YB" }: { title: string; subtitle?: string; initials?: string }) {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-border/70 bg-background/80 px-6 backdrop-blur">
       <div className="min-w-0">
@@ -22,7 +22,7 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
           <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-warning" />
         </Button>
         <Avatar>
-          <AvatarFallback>YB</AvatarFallback>
+          <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
       </div>
     </header>

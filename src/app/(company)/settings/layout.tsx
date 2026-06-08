@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Landmark, User } from "lucide-react";
+import { Building2, Landmark, User, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SETTINGS_NAV = [
   { href: "/settings/company", label: "Ma société", icon: Building2 },
   { href: "/settings/accounts", label: "Comptes bancaires", icon: Landmark },
   { href: "/settings/profile", label: "Profil utilisateur", icon: User },
+  { href: "/settings/accountant", label: "Accès comptable", icon: Briefcase },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

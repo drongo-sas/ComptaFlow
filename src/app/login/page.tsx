@@ -16,7 +16,9 @@ export default function LoginPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    router.push(role === "company" ? "/dashboard" : "/accountant");
+    localStorage.setItem("cf_role", role);
+    if (role === "accountant") localStorage.removeItem("cf_client_id");
+    router.push(role === "company" ? "/dashboard" : "/clients");
   }
 
   return (
